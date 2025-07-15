@@ -1,0 +1,109 @@
+server:
+  port: ${SERVER_PORT}
+  servlet:
+    context-path: ${SERVER_SERVLET_CONTEXT_PATH}
+    encoding:
+      enabled: true
+      charset: UTF-8
+  forward-headers-strategy: framework
+  address: ${SERVER_ADDRESS}
+
+app:
+  secret: ${APP_SECRET}
+  jwt:
+    token:
+      expires-in: ${APP_JWT_TOKEN_EXPIRES_IN}
+    refresh-token:
+      expires-in: ${APP_JWT_REFRESH_TOKEN_EXPIRES_IN}
+    remember-me:
+      expires-in: ${APP_JWT_REMEMBER_ME_EXPIRES_IN}
+  registration:
+    email:
+      token:
+        expires-in: ${APP_REGISTRATION_EMAIL_TOKEN_EXPIRES_IN}
+    password:
+      token:
+        expires-in: ${APP_REGISTRATION_PASSWORD_TOKEN_EXPIRES_IN}
+  default-locale: ${APP_DEFAULT_LOCALE}
+  default-timezone: ${APP_DEFAULT_TIMEZONE}
+  url: ${APP_URL}
+
+spring:
+  application:
+    name: ${APP_NAME}
+    description: ${APP_DESCRIPTION}
+  jpa:
+    hibernate:
+      ddl-auto: ${DB_DDL_AUTO}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        show_sql: true
+        format_sql: true
+        globally_quoted_identifiers: true
+        search:
+          backend:
+            type: lucene
+            directory:
+              root: ./data/index
+            analysis:
+              configurer: com.se330.coffee_shop_management_backend.config.fts.VietnameseAnalysisConfigurer
+            create_missing_directories: true
+    open-in-view: false
+  datasource:
+    url: jdbc:postgresql://${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRESQL_DB}
+    username: ${POSTGRESQL_USER}
+    password: ${POSTGRESQL_PASSWORD}
+  data:
+    redis:
+      database: ${REDIS_DATABASE}
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      timeout: ${REDIS_TIMEOUT}
+    web:
+      pageable:
+        default-page-size: ${PAGEABLE_DEFAULT_PAGE_SIZE}
+  messages:
+    basename: locales.messages
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force-encoding: true
+  http:
+    encoding:
+      force-encoding: true
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+  docker:
+    compose:
+      lifecycle-management: none
+      enabled: false
+
+springdoc:
+  api-docs:
+    enabled: ${API_DOCS_ENABLED}
+    path: /api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED}
+    operationsSorter: alpha
+    tagsSorter: alpha
+    path: ${SWAGGER_PATH}
+  show-actuator: true
+
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT}
+    org:
+      hibernate:
+        type: ${LOGGING_LEVEL_HIBERNATE}
+      springframework:
+        web: ${LOGGING_LEVEL_SPRING}
+  file:
+    name: ./var/logs/app.log
+  pattern:
+    file: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n'
+  logback:
+    rollingpolicy:
+      file-name-pattern: ./var/logs/app.%d{yyyy-MM-dd}.%i.log

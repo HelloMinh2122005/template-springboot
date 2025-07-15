@@ -1,0 +1,50 @@
+services:
+
+  spring-app:
+    build:
+      context: ../..
+      dockerfile: docker/local/Dockerfile
+    container_name: ${PROJECT_NAME}-app
+    ports:
+      - ${SERVER_PORT}:${SERVER_PORT}
+    depends_on:
+      - redis
+    env_file:
+      - ../../.env 
+    environment:
+      POSTGRESQL_HOST: ${POSTGRESQL_HOST}
+      POSTGRESQL_PORT: ${POSTGRESQL_PORT}
+      POSTGRESQL_DB: ${POSTGRESQL_DB}
+      POSTGRESQL_USER: ${POSTGRESQL_USER}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+    networks:
+      - ${PROJECT_NAME}-network
+  redis:
+    image: redis:7.0.12-alpine
+    container_name: ${PROJECT_NAME}-redis
+    restart: always
+    command: redis-server --save 20 1 --loglevel warning --requirepass "${REDIS_PASSWORD}"
+    volumes:
+      - redis-data:/data
+    ports:
+      - ${REDIS_PORT}:${REDIS_PORT}
+    networks:
+      - ${PROJECT_NAME}-network
+
+  # mailhog:
+  #   image: mailhog/mailhog:latest
+  #   container_name: template-mailhog
+  #   restart: always
+  #   env_file: .env
+  #   ports:
+  #     - '1025:1025'
+  #   networks:
+  #     - template-network
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  template-project-network:
+    driver: bridge
