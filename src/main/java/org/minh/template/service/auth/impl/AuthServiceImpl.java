@@ -122,52 +122,49 @@ public class AuthServiceImpl implements AuthService {
     }
 
     /**
-     * Refresh token.
-     *
-     * @param refreshToken String
-     * @return TokenResponse
+     * Đoạn mã này là hàm xử lý logic khi người dùng gửi yêu cầu làm mới (refresh) access token bằng refresh token.
      */
     @Override
     @Transactional
     public TokenResponse refresh(final String refreshToken) {
         log.info("Refresh request received: {}", refreshToken);
 
-        if (!jwtTokenProvider.validateToken(refreshToken)) {
+        if (!jwtTokenProvider.validateToken(refreshToken)) { // Kiểm tra tính hợp lệ của refresh token
             log.error("Refresh token is expired.");
-            throw new RefreshTokenExpiredException();
+            throw new RefreshTokenExpiredException(); // Ném ra ngoại lệ nếu refresh token không hợp lệ
         }
 
-        User user = jwtTokenProvider.getUserFromToken(refreshToken);
-        JwtToken oldToken = jwtTokenService.findByUserIdAndRefreshToken(user.getId(), refreshToken);
-        if (oldToken != null && oldToken.getRememberMe()) {
-            jwtTokenProvider.setRememberMe();
+        User user = jwtTokenProvider.getUserFromToken(refreshToken); // Lấy thông tin người dùng từ refresh token
+        JwtToken oldToken = jwtTokenService.findByUserIdAndRefreshToken(user.getId(), refreshToken); // Tìm kiếm token cũ dựa trên user ID và refresh token
+        if (oldToken != null && oldToken.getRememberMe()) { // Nếu token cũ tồn tại và có tùy chọn "remember me" được bật
+            jwtTokenProvider.setRememberMe(); // Thiết lập chế độ "remember me" cho token mới
         }
 
-        boolean rememberMe = false;
+        boolean rememberMe = false; // TODO: Sẽ thêm cơ chế để lấy giá trị rememberMe từ request hoặc từ token cũ
         if (oldToken != null) {
             rememberMe = oldToken.getRememberMe();
             jwtTokenService.delete(oldToken);
         }
 
-        return generateTokens(user.getId(), rememberMe);
+        return generateTokens(user.getId(), rememberMe); // Tạo và trả về token mới cho người dùng
     }
 
     /**
-     * Generate both access and refresh tokens.
-     *
-     * @param id         user identifier to set the subject for token and value for the expiring map
-     * @param rememberMe Boolean option to set the expiration time for refresh token
-     * @return an object of TokenResponse
+     * Đây là hàm dùng để sinh ra access token và refresh token mới cho người dùng, đồng thời lưu thông tin token vào database.
      */
     @Override
     @Transactional
     public TokenResponse generateTokens(final UUID id, final Boolean rememberMe) {
+        // Sinh access token (token) và refresh token (refreshToken) dựa trên id người dùng.
         String token = jwtTokenProvider.generateJwt(id.toString());
         String refreshToken = jwtTokenProvider.generateRefresh(id.toString());
+
+        // Nếu có chọn "remember me", gọi setRememberMe() để thiết lập thời gian sống của refresh token dài hơn.
         if (rememberMe) {
             jwtTokenProvider.setRememberMe();
         }
 
+        // Lưu thông tin token vào database thông qua jwtTokenService.
         jwtTokenService.save(JwtToken.builder()
                 .userId(id)
                 .token(token)
@@ -182,6 +179,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userService.findById(id);
         String role = user.getRole().getName().getValue();
 
+        // Trả về đối tượng TokenResponse chứa access token, refresh token, id và role của user.
         return TokenResponse.builder()
                 .accessToken(token)
                 .refreshToken(refreshToken)

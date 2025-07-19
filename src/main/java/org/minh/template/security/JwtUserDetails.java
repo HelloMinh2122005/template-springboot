@@ -9,7 +9,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
-@Data
+@Data // Dùng để sinh ra các phương thức getter, setter, toString, equals, và hashCode tự động.
+// UserDetails: Only defines the methods (interface).
+//JwtUserDetails: Implements those methods, adds extra fields, and adapts your application's user model to Spring Security.
 public final class JwtUserDetails implements UserDetails {
     private String id;
 

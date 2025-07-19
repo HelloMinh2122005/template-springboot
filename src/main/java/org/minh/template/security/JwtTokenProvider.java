@@ -66,59 +66,48 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Generate token by user ID.
-     *
-     * @param id      String
-     * @param expires Long
-     * @return String
+     * Tạo JWT token hoặc JWT refresh token mới dựa trên userId và thời gian hết hạn.
      */
-    public String generateTokenByUserId(final String id, final Long expires) {
-        String token = Jwts.builder()
-                .setSubject(id)
-                .setIssuedAt(new Date())
-                .setExpiration(getExpireDate(expires))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
+    public String generateTokenByUserId(final String id, final Long expires) { // Nhận vào userId và thời gian hết hạn
+        String token = Jwts.builder() // Sử dụng Jwts.builder() để tạo một JWT token mới
+                .setSubject(id) // Thiết lập subject của token là userId (thường thì subject luôn là userId hoặc username, đôi khi để email cũng được)
+                .setIssuedAt(new Date()) // Thiết lập thời gian phát hành token là thời điểm hiện tại
+                .setExpiration(getExpireDate(expires)) // Thiết lập thời gian hết hạn của token bằng cách gọi hàm getExpireDate với tham số expires
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // Sử dụng hàm signWith để ký token bằng khóa bí mật (appSecret) và thuật toán HS256
+                .compact(); // Gọi hàm compact() để hoàn thành việc xây dựng token và trả về chuỗi token đã được mã hóa
         log.trace("Token is added to the local cache for userID: {}, ttl: {}", id, expires);
 
         return token;
     }
 
     /**
-     * Generate JWT token by user ID.
-     *
-     * @param id String
-     * @return String
+     * Đây là phương thức để tạo JWT token cho người dùng dựa trên ID của họ.
      */
     public String generateJwt(final String id) {
         return generateTokenByUserId(id, tokenExpiresIn);
     }
 
     /**
-     * Generate refresh token by user ID.
-     *
-     * @param id String
-     * @return String
+     * Đây là phương thức để tạo JWT refresh token cho người dùng dựa trên ID của họ.
      */
     public String generateRefresh(final String id) {
         return generateTokenByUserId(id, refreshTokenExpiresIn);
     }
 
     /**
-     * Get JwtUserDetails from authentication.
-     *
-     * @param authentication Authentication
-     * @return JwtUserDetails
+     * Hàm này nhận vào một đối tượng Authentication (chứa thông tin xác thực của user).
+     * Nó gọi tiếp hàm getPrincipal của userService để lấy ra thông tin chi tiết user dưới dạng JwtUserDetails.
+     * Kết quả trả về là một đối tượng JwtUserDetails (chứa thông tin user, quyền hạn, trạng thái tài khoản...).
      */
     public JwtUserDetails getPrincipal(final Authentication authentication) {
         return userService.getPrincipal(authentication);
     }
 
     /**
-     * Get user ID from token.
-     *
-     * @param token String
-     * @return String
+     * Hàm này dùng để lấy userId từ chuỗi JWT token.
+     * Đầu tiên, gọi parseToken(token) để giải mã token và lấy ra phần body (claims).
+     * Sau đó, lấy giá trị subject từ claims (thường subject chính là userId đã lưu khi tạo token).
+     * Trả về userId dưới dạng chuỗi.
      */
     public String getUserIdFromToken(final String token) {
         Claims claims = parseToken(token).getBody();
@@ -151,34 +140,33 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Boolean result of whether token is valid or not.
-     *
-     * @param token String token
-     * @return boolean
+     *  Kiểm tra xem JWT token có hợp lệ không.
      */
     public boolean validateToken(final String token, final boolean isHttp) {
-        parseToken(token);
+        parseToken(token); // Giải mã và xác thực token bằng khóa bí mật. Nếu token sai định dạng hoặc bị giả mạo sẽ ném lỗi.
         try {
-            JwtToken jwtToken = jwtTokenService.findByTokenOrRefreshToken(token);
+            JwtToken jwtToken = jwtTokenService.findByTokenOrRefreshToken(token); // để kiểm tra token có tồn tại trong hệ thống  Redis?
 
         } catch (NotFoundException e) {
             log.error("[JWT] Token could not found in Redis");
             return false;
         }
 
-        return !isTokenExpired(token);
+        return !isTokenExpired(token); // Nếu token hợp lệ và tồn tại, kiểm tra tiếp token đã hết hạn chưa
     }
 
     /**
-     * Validate token.
-     *
-     * @param token              String
-     * @param httpServletRequest HttpServletRequest
-     * @return boolean
+     * Mục đích: Kiểm tra tính hợp lệ của JWT token và ghi chú lỗi vào request nếu token không hợp lệ.
      */
     public boolean validateToken(final String token, final HttpServletRequest httpServletRequest) {
         try {
-            boolean isTokenValid = validateToken(token);
+            boolean isTokenValid = validateToken(token); // Gọi hàm validateToken(token) để kiểm tra token có hợp lệ không (chữ ký đúng, còn hạn, tồn tại trong cache/Redis).
+            // Nếu token không hợp lệ, ghi log lỗi và gắn thuộc tính "notfound" vào request để báo lỗi cho phía client.
+            //Nếu token hợp lệ, trả về true.
+            //Nếu có exception khi kiểm tra token:
+            //Nếu token không đúng chuẩn, hết hạn, sai định dạng, hoặc claims rỗng, sẽ bắt từng loại exception tương ứng.
+            //Ghi log lỗi và gắn thông báo lỗi phù hợp vào request (ví dụ: "unsupported", "invalid", "expired", "illegal").
+            //Nếu có lỗi, luôn trả về false.
             if (!isTokenValid) {
                 log.error("[JWT] Token could not found in local cache");
                 httpServletRequest.setAttribute("notfound", "Token is not found in cache");
@@ -209,34 +197,34 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Extract jwt from bearer string.
-     *
-     * @param bearer String
-     * @return String value of bearer token or null
+     * Mục đích: Lấy ra chuỗi JWT token từ chuỗi header dạng "Bearer <token>".
+     * Ví dụ:
+     * Nếu bearer = "Bearer abc.def.ghi" thì hàm sẽ trả về "abc.def.ghi".
      */
     public String extractJwtFromBearerString(final String bearer) {
+        // Kiểm tra chuỗi bearer có giá trị (không null, không rỗng) và bắt đầu bằng "Bearer " (giá trị của TOKEN_TYPE).
         if (StringUtils.hasText(bearer) && bearer.startsWith(String.format("%s ", TOKEN_TYPE))) {
+            // Nếu đúng, cắt chuỗi token ra khỏi phần "Bearer " bằng cách lấy substring từ vị trí sau "Bearer ".
             return bearer.substring(TOKEN_TYPE.length() + 1);
         }
 
+        // Nếu không đúng định dạng, trả về null.
         return null;
     }
 
     /**
-     * Extract jwt from request.
-     *
-     * @param request HttpServletRequest object to get Authorization header
-     * @return String value of bearer token or null
+     * khi cần lấy JWT token từ header của HTTP request (thường là header "Authorization"),
+     * hệ thống sẽ gọi extractJwtFromRequest, và hàm này sẽ gọi tiếp extractJwtFromBearerString để lấy ra token thực sự.
      */
     public String extractJwtFromRequest(final HttpServletRequest request) {
         return extractJwtFromBearerString(request.getHeader(TOKEN_HEADER));
     }
 
     /**
-     * Parsing token.
-     *
-     * @param token String jwt token to parse
-     * @return Jws object
+     * Hàm này dùng để giải mã (parse) chuỗi JWT token.
+     * Sử dụng thư viện io.jsonwebtoken để tạo một parser, thiết lập khóa bí mật (signing key) dùng để xác thực token.
+     * Sau đó, gọi parseClaimsJws(token) để kiểm tra tính hợp lệ và lấy ra thông tin (claims) bên trong token.
+     * Kết quả trả về là một đối tượng Jws<Claims> chứa toàn bộ thông tin đã giải mã từ token.
      */
     private Jws<Claims> parseToken(final String token) {
         return Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);

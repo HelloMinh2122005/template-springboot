@@ -34,3 +34,6 @@ build/
 
 ### Log ###
 /var/logs
+
+### Copilot instructions ###
+.github/
