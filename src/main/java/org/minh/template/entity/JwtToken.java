@@ -16,13 +16,13 @@ import java.util.concurrent.TimeUnit;
 @Builder
 @Getter
 @Setter
-@RedisHash(value = "jwtTokens")
+@RedisHash(value = "jwtTokens") // Đánh dấu class này sẽ được lưu trữ dưới dạng hash trong Redis với tên là jwtTokens.
 public class JwtToken {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Indexed
+    @Indexed // @Indexed: Đánh dấu trường sẽ được tạo chỉ mục (index) trong Redis để tìm kiếm nhanh hơn.
     private UUID userId;
 
     @Indexed
